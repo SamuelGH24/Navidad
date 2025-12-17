@@ -26,7 +26,7 @@ app.post('/usuario', async (req, res) => {
   try {
     // Buscar el usuario
     const [rows] = await db.query(
-      'SELECT * FROM participantes WHERE nombre = ?',
+      'SELECT * FROM participantes WHERE nombre = $1',
       [nombre]
     );
 
@@ -41,7 +41,7 @@ app.post('/usuario', async (req, res) => {
       `SELECT p.nombre as asignado, p.deseo as deseo_asignado
        FROM asignaciones a 
        JOIN participantes p ON a.amigo_secreto_id = p.id 
-       WHERE a.usuario_id = ?`,
+       WHERE a.usuario_id = $1`,
       [usuario.id]
     );
 
@@ -67,7 +67,7 @@ app.get('/disponibles/:nombre', async (req, res) => {
     const [disponibles] = await db.query(
       `SELECT p.nombre 
        FROM participantes p
-       WHERE p.nombre != ?
+       WHERE p.nombre != $1
        AND p.id NOT IN (SELECT amigo_secreto_id FROM asignaciones)
        ORDER BY p.nombre`,
       [nombre]
@@ -91,7 +91,7 @@ app.post('/girar', async (req, res) => {
 
     // 1. Obtener usuario
     const [[usuario]] = await conn.query(
-      'SELECT * FROM participantes WHERE nombre = ? FOR UPDATE',
+      'SELECT * FROM participantes WHERE nombre = $1 FOR UPDATE',
       [nombre]
     );
 
@@ -102,13 +102,13 @@ app.post('/girar', async (req, res) => {
 
     // 2. Verificar si ya giró
     const [[yaGiro]] = await conn.query(
-      'SELECT * FROM asignaciones WHERE usuario_id = ?',
+      'SELECT * FROM asignaciones WHERE usuario_id = $1',
       [usuario.id]
     );
 
     if (yaGiro) {
       const [[asignado]] = await conn.query(
-        'SELECT nombre FROM participantes WHERE id = ?',
+        'SELECT nombre FROM participantes WHERE id = $1',
         [yaGiro.amigo_secreto_id]
       );
       await conn.commit();
@@ -122,7 +122,7 @@ app.post('/girar', async (req, res) => {
     const [disponibles] = await conn.query(
       `SELECT p.* 
        FROM participantes p
-       WHERE p.nombre != ?
+       WHERE p.nombre != $1
        AND p.id NOT IN (SELECT amigo_secreto_id FROM asignaciones)
        FOR UPDATE`,
       [nombre]
@@ -138,7 +138,7 @@ app.post('/girar', async (req, res) => {
 
     // 5. Insertar asignación (esto previene duplicados por las UNIQUE keys)
     await conn.query(
-      'INSERT INTO asignaciones (usuario_id, amigo_secreto_id) VALUES (?, ?)',
+      'INSERT INTO asignaciones (usuario_id, amigo_secreto_id) VALUES ($1, $2)',
       [usuario.id, ganador.id]
     );
 
@@ -150,7 +150,7 @@ app.post('/girar', async (req, res) => {
     console.error('Error en /girar:', err);
     
     // Si es error de duplicado (por race condition)
-    if (err.code === 'ER_DUP_ENTRY') {
+    if (err.code === '23505') {  // PostgreSQL duplicate key error
       return res.status(400).json({ error: 'Esta persona ya fue asignada, intenta de nuevo' });
     }
     
@@ -200,7 +200,7 @@ app.post('/deseo', async (req, res) => {
 
   try {
     await db.query(
-      'UPDATE participantes SET deseo = ? WHERE nombre = ?',
+      'UPDATE participantes SET deseo = $1 WHERE nombre = $2',
       [deseo, nombre]
     );
     res.json({ mensaje: 'Deseo guardado correctamente' });
