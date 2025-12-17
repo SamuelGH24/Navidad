@@ -4,6 +4,9 @@ let usuarioActual = null;
 let rotation = 0;
 let disponibles = [];
 
+// URL del backend en Render
+const API_URL = 'https://navidad-jrjv.onrender.com';
+
 /* ---------- LOGIN ---------- */
 function renderLogin(mensaje = "") {
   app.innerHTML = `
@@ -27,7 +30,7 @@ function login() {
     return;
   }
 
-  fetch('http://localhost:3000/usuario', {
+  fetch(`${API_URL}/usuario`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nombre })
@@ -51,7 +54,7 @@ function login() {
 
 /* ---------- CARGAR DISPONIBLES ---------- */
 function cargarDisponibles() {
-  fetch(`http://localhost:3000/disponibles/${usuarioActual.nombre}`)
+  fetch(`${API_URL}/disponibles/${usuarioActual.nombre}`)
     .then(res => res.json())
     .then(nombres => {
       disponibles = nombres;
@@ -207,7 +210,7 @@ function girar() {
   btn.disabled = true;
   btn.textContent = 'Girando...';
 
-  fetch('http://localhost:3000/girar', {
+  fetch(`${API_URL}/girar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nombre: usuarioActual.nombre })
@@ -268,7 +271,7 @@ function guardarDeseo() {
     return;
   }
 
-  fetch('http://localhost:3000/deseo', {
+  fetch(`${API_URL}/deseo`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ 
